@@ -27,7 +27,7 @@ echo_info "请配置项目信息 (直接回车将使用括号内的默认值)：
 read -p "1. 项目名称 (PM2中显示的名称) [默认: my-app]: " INPUT_NAME < /dev/tty
 PROJECT_NAME=${INPUT_NAME:-"my-app"}
 
-read -p "2. Git 仓库 SSH 地址 [默认: git@github.com:用户名/仓库名.git]: " INPUT_REPO < /dev/tty
+read -p "2. Git 仓库 SSH 地址 [默认: git@github.com:yeerhk/my-rag-app.git]: " INPUT_REPO < /dev/tty
 GIT_REPO=${INPUT_REPO:-"git@github.com:yeerhk/my-rag-app.git"}
 
 # ==========================================
