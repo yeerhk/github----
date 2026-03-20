@@ -28,7 +28,26 @@ read -p "1. 项目名称 (PM2中显示的名称) [默认: my-app]: " INPUT_NAME 
 PROJECT_NAME=${INPUT_NAME:-"my-app"}
 
 read -p "2. Git 仓库 SSH 地址 [默认: git@github.com:用户名/仓库名.git]: " INPUT_REPO < /dev/tty
-GIT_REPO=${INPUT_REPO:-"git@github.com:用户名/仓库名.git"}
+GIT_REPO=${INPUT_REPO:-"git@github.com:yeerhk/my-rag-app.git"}
+
+# ==========================================
+# 🛡️ 智能纠错：自动将 HTTPS 链接转换为 SSH 格式
+# ==========================================
+# 如果用户输入的是以 https://github.com/ 开头
+if [[ "$GIT_REPO" == https://github.com/* ]]; then
+    
+    # 1. 把 "https://github.com/" 替换为 "git@github.com:"
+    GIT_REPO="${GIT_REPO/https:\/\/github.com\//git@github.com:}"
+    
+    # 2. 如果结尾没有 ".git"，自动帮他补上
+    if [[ "$GIT_REPO" != *.git ]]; then
+        GIT_REPO="${GIT_REPO}.git"
+    fi
+    
+    # 打印提示，让用户知道脚本帮他纠正了
+    echo -e "\e[36m[INFO] 检测到 HTTPS 链接，已自动为您转换为 SSH 格式: $GIT_REPO\e[0m"
+fi
+
 
 read -p "3. 拉取的 Git 分支 [默认: main]: " INPUT_BRANCH < /dev/tty
 BRANCH=${INPUT_BRANCH:-"main"}
@@ -70,7 +89,7 @@ fi
 # 测试能否连通 GitHub (关闭 StrictHostKeyChecking 防止卡在确认提示)
 # 注意：即使成功，ssh -T 也会返回 exit code 1，所以必须用 grep 捕获输出，并临时关闭 set -e
 set +e 
-SSH_TEST_RESULT=$(ssh -T -o StrictHostKeyChecking=no git@github.com 2>&1)
+SSH_TEST_RESULT=$(ssh -n -T -o StrictHostKeyChecking=no git@github.com 2>&1)
 set -e
 
 if echo "$SSH_TEST_RESULT" | grep -q "successfully authenticated"; then
