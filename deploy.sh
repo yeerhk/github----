@@ -19,34 +19,36 @@ echo "======================================================="
 echo -e "\e[0m"
 
 # ==========================================
-# 📝 1. 交互式配置收集 (按回车使用默认值)
+# 📝 1. 交互式配置收集 (支持 curl | bash)
 # ==========================================
 echo_info "请配置项目信息 (直接回车将使用括号内的默认值)："
 
-read -p "1. 项目名称 (PM2中显示的名称) [默认: my-app]: " INPUT_NAME
+# 注意结尾新增的 < /dev/tty
+read -p "1. 项目名称 (PM2中显示的名称) [默认: my-app]: " INPUT_NAME < /dev/tty
 PROJECT_NAME=${INPUT_NAME:-"my-app"}
 
-read -p "2. Git 仓库 SSH 地址 [默认: git@github.com:用户名/仓库名.git]: " INPUT_REPO
+read -p "2. Git 仓库 SSH 地址 [默认: git@github.com:用户名/仓库名.git]: " INPUT_REPO < /dev/tty
 GIT_REPO=${INPUT_REPO:-"git@github.com:用户名/仓库名.git"}
 
-read -p "3. 拉取的 Git 分支 [默认: main]: " INPUT_BRANCH
+read -p "3. 拉取的 Git 分支 [默认: main]: " INPUT_BRANCH < /dev/tty
 BRANCH=${INPUT_BRANCH:-"main"}
 
-read -p "4. 是否需要执行编译 (例如 Vue/React/TS)？(y/n) [默认: y]: " INPUT_NEED_BUILD
+read -p "4. 是否需要执行编译 (例如 Vue/React/TS)？(y/n) [默认: y]: " INPUT_NEED_BUILD < /dev/tty
 INPUT_NEED_BUILD=${INPUT_NEED_BUILD:-"y"}
 
 if [[ "$INPUT_NEED_BUILD" == "y" || "$INPUT_NEED_BUILD" == "Y" ]]; then
     NEED_BUILD=true
-    read -p "   ➡️ 请输入编译命令 [默认: npm run build]: " INPUT_BUILD_CMD
+    read -p "   ➡️ 请输入编译命令 [默认: npm run build]: " INPUT_BUILD_CMD < /dev/tty
     BUILD_CMD=${INPUT_BUILD_CMD:-"npm run build"}
 else
     NEED_BUILD=false
 fi
 
-read -p "5. 项目启动命令 (如 npm start 或 node dist/main.js) [默认: npm start]: " INPUT_START_CMD
+read -p "5. 项目启动命令 (如 npm start 或 node dist/main.js) [默认: npm start]: " INPUT_START_CMD < /dev/tty
 START_CMD=${INPUT_START_CMD:-"npm start"}
 
 PROJECT_DIR="$HOME/www/$PROJECT_NAME"
+
 
 echo ""
 echo_success "配置收集完毕！即将开始自动化流程..."
