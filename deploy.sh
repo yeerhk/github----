@@ -59,11 +59,11 @@ sleep 2
 # ==========================================
 echo_info "正在检查 GitHub SSH 访问权限..."
 
-# 检查是否已有 SSH 密钥，没有则自动生成
-if [ ! -f "$HOME/.ssh/id_rsa" ]; then
+# 检查是否已有 ed25519 类型的 SSH 密钥，没有则自动生成
+if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
     echo_warning "未检测到本机的 SSH 密钥，正在自动生成..."
-    # 静默生成密钥，不设密码
-    ssh-keygen -t rsa -b 4096 -C "vps-deploy-key" -N "" -f "$HOME/.ssh/id_rsa" > /dev/null 2>&1
+    # 静默生成 ed25519 密钥，不设密码
+    ssh-keygen -t ed25519 -C "vps-deploy-key" -N "" -f "$HOME/.ssh/id_ed25519" > /dev/null 2>&1
     echo_success "SSH 密钥生成完毕！"
 fi
 
@@ -82,7 +82,7 @@ else
     echo "👉 路径：你的 GitHub 仓库 -> Settings -> Deploy keys -> Add deploy key"
     echo "========================================================="
     echo -e "\e[32m"
-    cat "$HOME/.ssh/id_rsa.pub"
+    cat "$HOME/.ssh/id_ed25519.pub"
     echo -e "\e[0m"
     echo "========================================================="
     echo_warning "⚠️ 添加完成后，请重新运行此脚本 ( ./deploy.sh )！"
