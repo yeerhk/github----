@@ -46,33 +46,41 @@ if command -v claude &> /dev/null; then
     echo -e "${GREEN}当前版本: $(claude --version)${NC}"
     echo -e "${GREEN}========================================${NC}"
     
-    # 交互式配置 API Key
-    echo -e "${YELLOW}为了在 VPS 环境下使用，需要配置 API Key。${NC}"
-    read -p "请输入您的 Anthropic API Key (直接回车可跳过，稍后手动配置): " USER_API_KEY
+    # 交互式配置 API Key 和 Base URL
+    echo -e "${YELLOW}开始配置 API 环境变量...${NC}"
+    
+    # 1. 询问 API Key
+    read -p "请输入您的 API Key (官方或第三方的均可，直接回车跳过): " USER_API_KEY
     
     if [ -n "$USER_API_KEY" ]; then
-        # 检查 ~/.bashrc 中是否已经存在配置，避免重复写入
-        if grep -q "export ANTHROPIC_API_KEY=" ~/.bashrc; then
-            # 替换旧的 Key (使用 sed)
-            sed -i "s/^export ANTHROPIC_API_KEY=.*/export ANTHROPIC_API_KEY=\"$USER_API_KEY\"/" ~/.bashrc
-            echo -e "${GREEN}已更新 ~/.bashrc 中的 API Key 配置。${NC}"
-        else
-            # 追加新的 Key
-            echo -e '\n# Claude Code API Key' >> ~/.bashrc
-            echo "export ANTHROPIC_API_KEY=\"$USER_API_KEY\"" >> ~/.bashrc
-            echo -e "${GREEN}已将 API Key 写入 ~/.bashrc。${NC}"
-        fi
+        # 2. 询问 Base URL (默认官方)
+        echo -e "如果您使用的是第三方中转 API，请输入接口地址。"
+        echo -e "例如: https://api.proxy.com (注意：通常不需要加 /v1)"
+        read -p "请输入 Base URL (直接回车则默认使用官方地址): " USER_BASE_URL
         
-        # 立即在当前脚本会话中生效
+        # 处理 ~/.bashrc 中的旧配置
+        sed -i '/export ANTHROPIC_API_KEY=/d' ~/.bashrc
+        sed -i '/export ANTHROPIC_BASE_URL=/d' ~/.bashrc
+        
+        # 写入新配置
+        echo -e '\n# Claude Code Environment Variables' >> ~/.bashrc
+        echo "export ANTHROPIC_API_KEY=\"$USER_API_KEY\"" >> ~/.bashrc
         export ANTHROPIC_API_KEY="$USER_API_KEY"
         
-        echo -e "${GREEN}配置完成！${NC}"
+        # 如果用户输入了自定义 URL，则写入；否则不写（默认走官方）
+        if [ -n "$USER_BASE_URL" ]; then
+            echo "export ANTHROPIC_BASE_URL=\"$USER_BASE_URL\"" >> ~/.bashrc
+            export ANTHROPIC_BASE_URL="$USER_BASE_URL"
+            echo -e "${GREEN}已配置第三方中转地址: $USER_BASE_URL ${NC}"
+        else
+            echo -e "${GREEN}未输入第三方地址，将使用 Anthropic 官方接口。${NC}"
+        fi
+        
+        echo -e "${GREEN}配置完成！环境变量已写入 ~/.bashrc。${NC}"
         echo -e "请执行 ${YELLOW}source ~/.bashrc${NC} 让环境变量在当前终端生效。"
         echo -e "然后输入 ${GREEN}claude${NC} 即可开始使用！"
     else
         echo -e "${YELLOW}您跳过了自动配置。${NC}"
-        echo -e "请稍后手动执行以下命令设置您的 API Key："
-        echo -e "export ANTHROPIC_API_KEY='你的_sk-xxxx_密钥'"
     fi
 else
     echo -e "${RED}安装似乎出现问题，请检查上方报错信息。${NC}"
