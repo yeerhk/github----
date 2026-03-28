@@ -9,3 +9,8 @@ curl -fsSL "https://raw.githubusercontent.com/yeerhk/github----/main/nvm&pm2.sh"
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/yeerhk/github----/main/deploy.sh" | bash
 ```
+
+安装虚拟环境
+```bash
+curl -fsSL "https://raw.githubusercontent.com/yeerhk/github----/main/setup_env.sh" | bash
+```
