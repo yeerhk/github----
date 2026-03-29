@@ -1,86 +1,151 @@
 import os
 import re
+import sys
+import time
 import subprocess
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# 🚀 核心动作：在程序一启动时，立刻加载 .env 文件中的变量到系统环境变量中
+# ==========================================
+# 1. 初始化与配置加载
+# ==========================================
+print("🔄 [初始化] 正在加载环境变量...")
 load_dotenv()
 
-# 现在，你可以安全地从环境变量中读取 Key 了
-# os.getenv 会自动去系统环境变量（包括刚才 .env 加载进来的）里找对应的值
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_BASE_URL")
+model_name = os.getenv("MODEL_NAME") or "qwen3.5-flash-2026-02-23"
 
 if not api_key:
-    raise ValueError("❌ 致命错误：未找到 OPENAI_API_KEY，请检查 .env 文件是否配置正确！")
+    raise ValueError("❌ 致命错误：未找到 OPENAI_API_KEY，请检查 .env 文件！")
+if not base_url:
+    raise ValueError("❌ 致命错误：未找到 OPENAI_BASE_URL，请检查 .env 文件！")
 
-# 初始化客户端
+print(f"✅ [初始化] 成功连接配置。当前使用模型: {model_name}")
+
 client = OpenAI(
     api_key=api_key, 
-    base_url=base_url
+    base_url=base_url,
+    timeout=120.0
 )
+
+# ==========================================
+# 2. 核心功能函数
+# ==========================================
 def load_prompt_template(filepath):
     """加载 Skill 提示词模板"""
+    print(f"📂 [读取] 正在加载提示词模板: {os.path.basename(filepath)}")
     with open(filepath, "r", encoding="utf-8") as f:
         return f.read()
 
 def generate_tender(company_name, tender_requirements, prompt_path):
-    print("🚀 [1/3] 正在呼叫 AI 大脑撰写标书...")
-    
-    # 读取系统提示词 (Skill Definition)
+    print(f"\n🚀 [阶段 1/3] 准备呼叫 AI 大脑...")
     system_prompt = load_prompt_template(prompt_path)
-    
-    # 构建用户输入
     user_prompt = f"企业名称: {company_name}\n招标要求: {tender_requirements}"
     
+    print(f"📡 [网络] 正在发送请求到大模型 ({model_name})...")
+    print(f"🧠 [思考] AI 正在仔细阅读 {len(tender_requirements)} 字的招标文件...")
+    print("⏳ 请耐心等待 10~30 秒，不要关闭窗口...")
+    
+    # 记录开始思考的时间
+    start_time = time.time()
+    
     response = client.chat.completions.create(
-        model="gpt-4o", # 可替换为本地大模型，如 qwen2.5-72b-instruct
+        model=model_name,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        temperature=0.3 # 标书需要严谨，降低温度值以减少幻觉
+        temperature=0.3,
+        stream=True  # 开启流式传输
     )
     
-    raw_md = response.choices[0].message.content
-    # 增加防御性判断，告诉 Pylance 我们处理了 None 的情况
-    if raw_md is None:
-      print("❌ 警告：大模型返回了空内容！")
-      return "" # 或者抛出异常 raise ValueError("API returned None")
+    raw_md = ""
+    is_first_word = True # 标记是否是第一个字
+    
+    # 循环接收 AI 吐出来的每一个字
+    for chunk in response:
+        # 提取当前片段的内容
+        if chunk.choices[0].delta.content is not None:
+            # 如果是 AI 吐出的第一个字，打印一下它思考了多久
+            if is_first_word:
+                think_time = time.time() - start_time
+                print(f"💡 [搞定] 思考完毕！(耗时: {think_time:.1f} 秒)")
+                print("\n✍️  [生成] AI 开始撰写标书：")
+                print("="*60)
+                is_first_word = False
+                
+            content = chunk.choices[0].delta.content
+            print(content, end="", flush=True) 
+            raw_md += content 
+            
+    print("\n" + "="*60)
+    print("✅ [生成] AI 撰写完毕！")
   
-    # 清洗 Markdown 内容 (防止大模型输出 ```markdown ... ``` 导致排版错误)
     cleaned_md = re.sub(r'^```markdown\n|```$', '', raw_md, flags=re.MULTILINE).strip()
     return cleaned_md
 
-def save_and_convert(markdown_content, output_filename="tender"):
-    # 确保输出目录存在
-    output_dir = os.path.join(os.path.dirname(__file__), "..", "output")
+def save_and_convert(markdown_content, output_filename, output_dir):
+    """保存 MD 文件并转换为 Word"""
     os.makedirs(output_dir, exist_ok=True)
     
     md_path = os.path.join(output_dir, f"{output_filename}.md")
     docx_path = os.path.join(output_dir, f"{output_filename}.docx")
     
-    print(f"💾 [2/3] 正在将标书保存为 Markdown 文件: {md_path}")
+    print(f"\n💾 [阶段 2/3] 正在保存 Markdown 文件...")
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(markdown_content)
+    print(f"✅ [保存] Markdown 文件已存至: {md_path}")
         
-    print(f"⚙️ [3/3] 正在调用本地脚本转换为 Word 文档: {docx_path}")
-    
-    # 调用本地转换脚本 md2word.py
+    print(f"\n⚙️ [阶段 3/3] 正在转换为 Word 文档...")
     converter_script = os.path.join(os.path.dirname(__file__), "md2word.py")
     try:
-        subprocess.run(["python", converter_script, md_path, docx_path], check=True)
-        print(f"✅ 任务完成！标书已就绪，保存在: {docx_path}")
+        subprocess.run([sys.executable, converter_script, md_path, docx_path], check=True)
+        print(f"🎉 [大功告成] Word 标书已生成！文件位置: {docx_path}")
     except subprocess.CalledProcessError as e:
-        print(f"❌ 转换失败: {e}")
+        print(f"❌ [错误] Word 转换失败: {e}")
 
+# ==========================================
+# 3. 主程序执行逻辑
+# ==========================================
 if __name__ == "__main__":
-    # 示例运行
-    company = "星辰人工智能科技有限公司"
-    requirements = "1. 需要一套私有化部署的大模型问答系统；2. 支持至少1000人并发；3. 要求包含详细的硬件拓扑图规划和售后培训方案。"
+    print("\n" + "*"*50)
+    print(" 🤖 自动化标书生成系统启动 ")
+    print("*"*50 + "\n")
+
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(base_dir, "data")
+    prompt_file = os.path.join(base_dir, "prompt", "tender_writer_skill.md")
     
-    prompt_file = os.path.join(os.path.dirname(__file__), "..", "prompt", "tender_writer_skill.md")
+    # 读取企业名称
+    company_file = os.path.join(data_dir, "投标企业.txt")
+    if not os.path.exists(company_file):
+        raise FileNotFoundError(f"❌ 找不到文件: {company_file}")
     
+    with open(company_file, "r", encoding="utf-8") as f:
+        company = f.read().strip()
+    print(f"🏢 [数据] 成功读取投标企业: 【{company}】")
+        
+    # 智能寻找招标文件
+    tender_file = None
+    for filename in os.listdir(data_dir):
+        if filename.endswith(".txt") and filename != "投标企业.txt":
+            tender_file = os.path.join(data_dir, filename)
+            break
+            
+    if not tender_file:
+        raise FileNotFoundError("❌ 在 data 目录下没有找到招标文件！请放入 txt 格式的招标文件。")
+        
+    with open(tender_file, "r", encoding="utf-8") as f:
+        requirements = f.read().strip()
+    
+    # 打印一下读取了多少字，心里有数
+    print(f"📄 [数据] 成功读取招标文件: 【{os.path.basename(tender_file)}】 (共 {len(requirements)} 字)")
+    
+    # 执行生成
     md_text = generate_tender(company, requirements, prompt_file)
-    save_and_convert(md_text, "星辰科技_大模型项目标书")
+    
+    # 保存与转换
+    if md_text:
+        output_name = f"{company}_项目标书"
+        save_and_convert(md_text, output_name, data_dir)
