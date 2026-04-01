@@ -1,0 +1,18 @@
+# -----------------------------------------
+# 🚀 我的国内 VPS 业务登记表
+# -----------------------------------------
+
+# 业务 1：AI 绘画工作站
+comfyui.ai.yourdomain.com {
+    reverse_proxy 127.0.0.1:8188
+}
+
+# 业务 2：我的私人网盘
+disk.ai.yourdomain.com {
+    reverse_proxy 127.0.0.1:5244
+}
+
+# 业务 3：临时跑的一个测试网页
+test.ai.yourdomain.com {
+    reverse_proxy 127.0.0.1:8080
+}

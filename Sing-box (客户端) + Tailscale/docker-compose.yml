@@ -1,0 +1,53 @@
+services:
+  # 1. 跨国高铁客户端 (Sing-box TUN 模式)
+  sing-box-client:
+    image: ghcr.io/sagernet/sing-box:latest
+    container_name: sing-box-client
+    restart: always
+    network_mode: "host"
+    privileged: true # TUN 模式需要高权限接管全局或特定流量
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./sing-box/config.json:/etc/sing-box/config.json
+      - /dev/net/tun:/dev/net/tun
+
+  # 2. 内网对讲机 (Tailscale)
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscaled
+    restart: always
+    network_mode: "host"
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./tailscale/state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TS_AUTHKEY=tskey-auth-你的Tailscale_Auth_Key
+      - TS_STATE_DIR=/var/lib/tailscale
+    depends_on:
+      - sing-box-client # 确保 Sing-box 先启动，建立好出国专线
+
+  # 👑 新增：本地业务大管家 (Caddy)
+  caddy:
+    image: caddy:alpine
+    container_name: caddy-gateway
+    restart: always
+    network_mode: "host" # 直接监听宿主机的 80 端口
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile # 👈 这就是你要的“登记配置文件”！
+  # 业务 1：AI 绘画
+  comfyui:
+    image: yanwk/comfyui-boot:latest
+    container_name: comfyui
+    ports:
+      - "127.0.0.1:8188:8188" # 仅本地可见
+  # 业务 2：个人网盘 (举例)
+  alist:
+    image: xhofe/alist:latest
+    container_name: alist
+    ports:
+      - "127.0.0.1:5244:5244" # 仅本地可见

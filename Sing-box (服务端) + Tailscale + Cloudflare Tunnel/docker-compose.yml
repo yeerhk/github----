@@ -1,0 +1,36 @@
+services:
+  # 1. 跨国高铁服务端 (Sing-box)
+  sing-box-server:
+    image: ghcr.io/sagernet/sing-box:latest
+    container_name: sing-box-server
+    restart: always
+    network_mode: "host" # 为了极致性能，直接使用宿主机网络
+    volumes:
+      - ./sing-box/config.json:/etc/sing-box/config.json
+    # 注意：确保 Azure 防火墙开放了 Sing-box 监听的端口
+
+  # 2. 内网对讲机 (Tailscale)
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscaled
+    restart: always
+    network_mode: "host"
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./tailscale/state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TS_AUTHKEY=tskey-auth-你的Tailscale_Auth_Key # 填入你的 Auth Key，实现免密一键自动登录！
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_EXTRA_ARGS=--advertise-exit-node
+  # 3. 防弹大门 (Cloudflare Tunnel)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=eyJh...你的CF_Tunnel_Token... # 填入 CF 控制台给你的 Token
