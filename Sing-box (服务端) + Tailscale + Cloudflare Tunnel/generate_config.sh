@@ -1,6 +1,6 @@
 #!/bin/bash
 # ====================================================
-# Sing-box VLESS + REALITY 跨国高铁一键装配脚本
+# Sing-box VLESS + REALITY 跨国高铁一键装配脚本 (适配 1.13.0+ 新语法)
 # ====================================================
 
 echo "🚀 正在启动自动化装配流水线..."
@@ -11,21 +11,16 @@ mkdir -p ./sing-box
 # 2. 生成高强度安全密钥
 echo "🔑 正在向系统内核申请高强度随机数..."
 
-# 使用 Linux 内核自带的 /proc/sys/kernel/random/uuid 生成标准 UUID
 UUID=$(cat /proc/sys/kernel/random/uuid)
-
-# 使用 openssl 生成 8 字节的随机十六进制作为 Short ID
 SHORT_ID=$(openssl rand -hex 8)
 
 echo "🎭 正在调用 Docker 生成 REALITY 易容密钥对 (可能需要几秒钟)..."
-# 调用 Docker 里的 sing-box 临时容器生成密钥对
 KEYPAIR=$(docker run --rm ghcr.io/sagernet/sing-box generate reality-keypair)
 
-# 提取私钥和公钥
 PRIVATE_KEY=$(echo "$KEYPAIR" | grep PrivateKey | awk '{print $2}')
 PUBLIC_KEY=$(echo "$KEYPAIR" | grep PublicKey | awk '{print $2}')
 
-# 3. 组装并写入 config.json
+# 3. 组装并写入 config.json (⭐ 这里使用了最新的 1.13.0 语法)
 echo "📝 正在生成服务端 config.json..."
 
 cat > ./sing-box/config.json <<EOF
@@ -40,8 +35,6 @@ cat > ./sing-box/config.json <<EOF
       "tag": "vless-in",
       "listen": "::",
       "listen_port": 443,
-      "sniff": true,
-      "sniff_override_destination": true,
       "users": [
         {
           "uuid": "${UUID}",
@@ -78,7 +71,18 @@ cat > ./sing-box/config.json <<EOF
   "route": {
     "rules": [
       {
-        "ip_is_private": true,
+        "inbound": "vless-in",
+        "action": "sniff"
+      },
+      {
+        "ip_cidr": [
+          "10.0.0.0/8",
+          "172.16.0.0/12",
+          "192.168.0.0/16",
+          "127.0.0.0/8",
+          "fc00::/7",
+          "fe80::/10"
+        ],
         "outbound": "block"
       }
     ],
@@ -102,4 +106,4 @@ echo "🏷️  短 ID(Short): ${SHORT_ID}"
 echo "🎭 伪装域名   : www.microsoft.com"
 echo "🌊 流控(Flow) : xtls-rprx-vision"
 echo "=========================================================="
-echo "💡 架构师，现在只需运行 'docker-compose up -d' 即可全线通车！"
+echo "💡 架构师，现在只需运行 'docker compose up -d' 即可全线通车！"
