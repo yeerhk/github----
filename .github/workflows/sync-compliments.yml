@@ -1,0 +1,24 @@
+name: Sync Compliments to n8n
+
+on:
+  push:
+    paths:
+      - 'mmm-compliments.md'  # 只有当这个文件改变时才触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Read Markdown and Post to n8n
+        run: |
+          # 读取文件内容并转换为安全转义的 JSON 字符串
+          MD_CONTENT=$(cat mmm-compliments.md)
+          
+          # 使用 jq 组装 JSON，并携带 Header 认证发送给 n8n
+          jq -n --arg md "$MD_CONTENT" '{"markdown": $md}' | curl -X POST "${{ secrets.N8N_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "X-Auth-Key: ${{ secrets.N8N_API_KEY }}" \
+            -d @-

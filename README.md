@@ -14,3 +14,9 @@ curl -fsSL "https://raw.githubusercontent.com/yeerhk/github----/main/deploy.sh" 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/yeerhk/github----/main/setup_env.sh" | bash
 ```
+
+设置内存SWAP
+```bash
+curl -sSO https://raw.githubusercontent.com/yeerhk/github----/main/set_swap.sh && sudo bash set_swap.sh && rm -f set_swap.sh
+```
+
